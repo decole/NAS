@@ -1,0 +1,45 @@
+
+.bot_face {
+    width: 320px;
+}
+
+.dialog-speech {
+    background-color: #d4d7d7;
+}
+.iner_block.fahry-box > span {
+    color: #1ABC9C;
+    padding-left: 10px;
+}
+.dialog-speech,.dialog-action {
+    display: block;
+    padding: 5px;
+}
+.dialog-action {
+    background-color: #050505;
+}
+.bottom-10 {
+    padding-bottom: 15px;
+}
+
+.small-box>.small-box-footer.on {
+    background-color: #00A000;
+}
+.small-box>.small-box-footer.off {
+    background-color: #ff2328;
+}
+a.small-box-footer.off.relay-control, a.small-box-footer.on.relay-control {
+    cursor: pointer;
+}
+.small-box h3 {
+    font-size: 34px;
+}
+@media (max-width: 425px) {
+    .small-box h3{
+        font-size: 20px;
+    }
+}
+@media (max-width: 375px) {
+    .small-box h3{
+        font-size: 16px;
+    }
+}
