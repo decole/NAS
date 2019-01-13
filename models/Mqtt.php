@@ -52,11 +52,6 @@ class Mqtt extends \yii\db\ActiveRecord
         ];
     }
 
-    /**
-     * !!! Не забудь !!!
-     * Нужно свериться с ApiController->nameRelay($name)  для страницы /site/arduino - переключателм состояния реле
-     * @return array
-     */
     public static function getSwiftNames()
     {
         return [

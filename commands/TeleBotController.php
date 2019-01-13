@@ -181,10 +181,13 @@ class TeleBotController extends Controller
         $string = 'Данные по сенсорам:'.PHP_EOL;
         $topics = MqttLogic::listTopics();
         $nameOfTopics = Mqtt::getSensorNames();
+        $cache = new MqttLogic;
         foreach ($topics as $topic => $options) {
             if($options['type'] == 'sensor') {
-                $payload = getCacheMqtt($topic);
-                //@Todo переписать на мэмкэш с проверкой если нет данных то с базы или ошибка
+                $payload = $cache->getCacheMqtt($topic);
+                if($payload === null){
+                    $payload = 'memcache no data';
+                }
                 $string .= $nameOfTopics[$topic] . ' - ' . $payload . $topics[$topic]['format'] . PHP_EOL;
             }
         }

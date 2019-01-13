@@ -7,8 +7,10 @@
 
 namespace app\commands;
 
+use app\helpers\mqtt\MqttLogic;
 use app\models\Arduinoiot;
 use app\models\Mqtt;
+use Yii;
 use yii\console\Controller;
 use yii\helpers\ArrayHelper;
 
@@ -36,7 +38,28 @@ class HelloController extends Controller
      */
     public function actionDate(): void
     {
-        echo  date('Y-m-d H:i:s') . PHP_EOL;
+        echo 'helper yii2 - ' . Yii::$app->formatter->asDate(date('Y-m-d H:i:s'), 'yyyy-MM-dd HH:mm:ss') . ' php- ' . date('Y-m-d H:i:s') . PHP_EOL;
     }
 
+    public function actionListCache():void
+    {
+        $cache = Yii::$app->cache;
+        $options = MqttLogic::listTopics();
+        foreach ($options as $topic => $option){
+//            if($option['type'] === 'sensor') {
+                $payload = $cache->get($topic);
+//                $customer = new Mqtt();
+//                $customer->topic = $topic;
+//                $customer->payload = $payload;
+//                $customer->datetime = date('Y-m-d H:i:s');
+//                //Yii::$app->formatter->asDate(date('Y-m-d H:i:s'), 'yyyy-MM-dd HH:mm:ss');
+//                if($cache->get($topic) !== null) {
+//                    if (!$customer->save()) {
+//                        echo "not added payload \n";
+                        var_dump('topic:' . $topic . ', payload:' . $payload);
+//                    }
+//                }
+//            }
+        }
+    }
 }

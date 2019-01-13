@@ -2,6 +2,7 @@
 
 namespace app\controllers;
 
+use app\helpers\mqtt\MqttLogic;
 use app\models\Arduino;
 use app\models\Arduinoiot;
 use app\models\ContactForm;
@@ -294,19 +295,14 @@ class SiteController extends Controller
      */
     public function actionArduino()
     {
-        // @Todo брать данные с топиков из мэмкэш, если нет в мэмкеш вывести вместо данных - ошибка
-        $timeLine   = Mqtt::find()->max('datetime');
-        $mqtt_massive = Mqtt::find()->where(['datetime' => "$timeLine"])->all();
-        $mqtt_array = ArrayHelper::map($mqtt_massive, 'topic', 'payload');
-
-        $mqtt_underflor_temperature   = $this->verifiMqttData($mqtt_array, 'underflor/temperature');
-        $mqtt_underflor_humidity      = $this->verifiMqttData($mqtt_array, 'underflor/humidity');
-        $mqtt_underground_temperature = $this->verifiMqttData($mqtt_array, 'underground/temperature');
-        $mqtt_underground_humidity    = $this->verifiMqttData($mqtt_array, 'underground/humidity');
-        $mqtt_holl_temperature        = $this->verifiMqttData($mqtt_array, 'holl/temperature');
-        $mqtt_holl_humidity           = $this->verifiMqttData($mqtt_array, 'holl/humidity');
-        $mqtt_margulis_temperature    = $this->verifiMqttData($mqtt_array, 'margulis/temperature');
-        $mqtt_margulis_humidity       = $this->verifiMqttData($mqtt_array, 'margulis/humidity');
+        $mqtt_underflor_temperature   = $this->verifiMqttData('underflor/temperature');
+        $mqtt_underflor_humidity      = $this->verifiMqttData('underflor/humidity');
+        $mqtt_underground_temperature = $this->verifiMqttData('underground/temperature');
+        $mqtt_underground_humidity    = $this->verifiMqttData('underground/humidity');
+        $mqtt_holl_temperature        = $this->verifiMqttData('holl/temperature');
+        $mqtt_holl_humidity           = $this->verifiMqttData('holl/humidity');
+        $mqtt_margulis_temperature    = $this->verifiMqttData('margulis/temperature');
+        $mqtt_margulis_humidity       = $this->verifiMqttData('margulis/humidity');
 
         $timeLineW   = Weather::find()->max('date');
         $acuweather = Weather::find()->where(['date' => "$timeLineW"])->one();
@@ -340,13 +336,19 @@ class SiteController extends Controller
         ]);
     }
 
-    protected function verifiMqttData($array, $topic)
+    /**
+     * find payload sensors in memcached or find last record in DB
+     *
+     * @param $cache
+     * @param $topic
+     * @return false|null|string
+     *
+     * @var $cache MqttLogic
+     */
+    protected function verifiMqttData($topic)
     {
-        if(isset($array[$topic])){
-            return $array[$topic];
-        }
-
-        return Mqtt::find()->where(['topic' => $topic])->orderBy('datetime DESC')->limit(1)->select('payload')->scalar();
+        $cache = new MqttLogic();
+        return $cache->getCacheMqtt($topic) ?? Mqtt::find()->where(['topic' => $topic])->orderBy('datetime DESC')->limit(1)->select('payload')->scalar();
     }
 
     public function pressureToMmRt($pressure)

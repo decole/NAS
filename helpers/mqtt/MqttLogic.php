@@ -21,6 +21,7 @@ class MqttLogic extends BaseObject
     private $client;
     private $isConnect = false;
     private $alarmTemper = 43;
+    private $periodicTime = 1800; // период произведения анализа в методе pprocess
 
     public function __construct(array $config = [])
     {
@@ -79,11 +80,12 @@ class MqttLogic extends BaseObject
     public function process($message){
         $options = static::listTopics()[$message->topic] ?? null;
         if($options) {
+            $this->setCacheMqtt($message->topic, $message->payload);
             $this->analising($message, $options);
             if(time() > $this->getCacheMqtt('analisingTime')) {
                 $this->checkAnomaly();
                 $this->saveToDB();
-                $this->setCacheMqtt('analisingTime', time() + 60);
+                $this->setCacheMqtt('analisingTime', time() + $this->periodicTime);
             }
         }
 
@@ -100,6 +102,7 @@ class MqttLogic extends BaseObject
         if($options && isset($options['message']) && is_callable($options['message'])) {
             // save in memecache topic and payload
             $this->setCacheMqtt($message->topic, $message->payload);
+            //echo 'set cache: topic ' . $message->topic . ', payload ' . $message->payload . PHP_EOL;
             // if send changing command in mqtt mobile app
             if($options['type'] === 'swift') {
                 $this->changeState($options, $message);
@@ -117,7 +120,7 @@ class MqttLogic extends BaseObject
      * @param $key
      * @return mixed|string
      */
-    private function getCacheMqtt($key)
+    public function getCacheMqtt($key)
     {
         $cache = Yii::$app->cache;
         $data  = $cache->get($key);
@@ -151,15 +154,18 @@ class MqttLogic extends BaseObject
     private function checkAnomaly(): void
     {
         $options = static::listTopics();
-
+        $message = null;
         foreach ($options as $topic => $option){
             $payload = $this->getCacheMqtt($topic);
             if ($payload !== null && $option['type'] === 'sensor' &&
                 ((isset($option['condition']['min']) && $option['condition']['min'] > $payload) ||
                 (isset($option['condition']['max']) && $option['condition']['max'] < $payload))
             ) {
-                $this->mailing($option['message']($payload), $options);
+                $message .= $option['message']($payload) . PHP_EOL;
             }
+        }
+        if($message !== null){
+            $this->mailing($message, $options);
         }
 
     }
@@ -206,19 +212,25 @@ class MqttLogic extends BaseObject
      */
     private function saveToDB(): void
     {
-        $options = static::listTopics();
-
-        foreach ($options as $topic => $option) {
-            $payload = $this->getCacheMqtt($topic);
-            $customer = new Mqtt();
-            $customer->topic = $options['sensorName'];
-            $customer->payload = $payload;
-            $customer->datetime = Yii::$app->formatter->asDate(date('Y-m-d H:i:s'), 'yyyy-MM-dd HH:mm:ss');
-            if (!$customer->save()) {
-                echo "not added payload \n";
-                var_dump('topic:' . $topic . ', payload:' . $payload);
+        $cache = Yii::$app->cache;
+        $options = MqttLogic::listTopics();
+        foreach ($options as $topic => $option){
+            if($option['type'] === 'sensor') {
+                $payload = $cache->get($topic);
+                $customer = new Mqtt();
+                $customer->topic = $topic;
+                $customer->payload = $payload;
+                $customer->datetime = date('Y-m-d H:i:s');
+                //Yii::$app->formatter->asDate(date('Y-m-d H:i:s'), 'yyyy-MM-dd HH:mm:ss');
+                if($cache->get($topic) !== null) {
+                    if (!$customer->save()) {
+                        echo "not added payload \n";
+                        var_dump('topic:' . $topic . ', payload:' . $payload);
+                    }
+                }
             }
         }
+
     }
 
     /**
