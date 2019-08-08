@@ -28,8 +28,16 @@ $this->title = 'Данные сенсоров';
                 <span class="info-box-icon bg-green"><i class="fa fa-sitemap"></i></span>
                 <div class="info-box-content">
                     <span class="info-box-text">Пристройка</span>
-                    <span class="info-box-number">t. <?=$margulis_temperature?> &#8451; </span>
-                    <span class="info-box-number"><i class="fa fa-fire"></i> <?=$margulis_humidity?> %</span>
+                    <span class="info-box-number">t.
+                        <span class="sensor-state" data-topic="margulis/temperature">
+                            <?=$margulis_temperature?>
+                        </span> &#8451;
+                    </span>
+                    <span class="info-box-number"><i class="fa fa-fire"></i>
+                        <span class="sensor-state" data-topic="margulis/humidity">
+                            <?=$margulis_humidity?>
+                        </span> %
+                    </span>
                 </div><!-- /.info-box-content -->
             </div><!-- /.info-box -->
         </div>
@@ -38,8 +46,16 @@ $this->title = 'Данные сенсоров';
                 <span class="info-box-icon bg-green"><i class="fa fa-sitemap"></i></span>
                 <div class="info-box-content">
                     <span class="info-box-text">Холодная прихожка</span>
-                    <span class="info-box-number">t. <?=$holl_temperature ?> &#8451; </span>
-                    <span class="info-box-number"><i class="fa fa-fire"></i> <?=$holl_humidity ?> %</span>
+                    <span class="info-box-number">t.
+                        <span class="sensor-state" data-topic="holl/temperature">
+                            <?=$holl_temperature ?>
+                        </span> &#8451;
+                    </span>
+                    <span class="info-box-number"><i class="fa fa-fire"></i>
+                        <span class="sensor-state" data-topic="holl/humidity">
+                            <?=$holl_humidity ?>
+                        </span> %
+                    </span>
                 </div><!-- /.info-box-content -->
             </div><!-- /.info-box -->
         </div>
@@ -48,8 +64,16 @@ $this->title = 'Данные сенсоров';
                 <span class="info-box-icon bg-green"><i class="fa fa-sitemap"></i></span>
                 <div class="info-box-content">
                     <span class="info-box-text">Низа</span>
-                    <span class="info-box-number">t. <?=$underflor_temperature ?> &#8451; </span>
-                    <span class="info-box-number"><i class="fa fa-fire"></i> <?=$underflor_humidity ?> %</span>
+                    <span class="info-box-number">t.
+                        <span class="sensor-state"  data-topic="underflor/temperature">
+                            <?=$underflor_temperature ?>
+                        </span> &#8451;
+                    </span>
+                    <span class="info-box-number"><i class="fa fa-fire"></i>
+                        <span class="sensor-state" data-topic="underflor/humidity">
+                            <?=$underflor_humidity ?>
+                        </span> %
+                    </span>
                 </div><!-- /.info-box-content -->
             </div><!-- /.info-box -->
         </div>
@@ -58,35 +82,20 @@ $this->title = 'Данные сенсоров';
                 <span class="info-box-icon bg-green"><i class="fa fa-sitemap"></i></span>
                 <div class="info-box-content">
                     <span class="info-box-text">Коридор в низа</span>
-                    <span class="info-box-number">t. <?=$underground_temperature ?> &#8451; </span>
-                    <span class="info-box-number"><i class="fa fa-fire"></i> <?=$underground_humidity ?> %</span>
+                    <span class="info-box-number">t.
+                        <span class="sensor-state" data-topic="underground/temperature">
+                            <?=$underground_temperature ?>
+                        </span> &#8451;
+                    </span>
+                    <span class="info-box-number"><i class="fa fa-fire"></i>
+                        <span class="sensor-state" data-topic="underground/humidity">
+                            <?=$underground_humidity ?>
+                        </span> %
+                    </span>
                 </div><!-- /.info-box-content -->
             </div><!-- /.info-box -->
         </div>
     </div>
-
-    <div class="row">
-        <?php
-        foreach ($ralays as $key=>$value){
-        ?>
-            <div class="col-lg-3 col-xs-6">
-                <!-- small box -->
-                <div class="small-box bg-yellow">
-                    <div class="inner">
-                        <h3><i class="fa fa-sliders"></i> <?=$value['name']?></h3>
-                        <p class="relay-status" data-id="<?=$key?>"><?=$value['relay1'] ?></p>
-                    </div>
-                    <div class="icon">
-                        <i class="ion ion-bag"></i>
-                    </div>
-                    <a class="small-box-footer <?=$value['relay1'] ?> relay-control" data-id="<?=$key?>">Переключить <i class="fa fa-arrow-circle-right"></i></a>
-                </div>
-            </div><!-- ./col -->
-        <?php
-        }
-        ?>
-    </div>
-
 </div>
 
 <div class="row">

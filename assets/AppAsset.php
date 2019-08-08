@@ -31,6 +31,7 @@ class AppAsset extends AssetBundle
 //        'plugins/bootstrap-wysihtml5/bootstrap3-wysihtml5.min.css',
     ];
     public $js = [
+        'js/moment.min.js',
         'js/custom.js',
 //        'bower_c$(document).ready(function () {omponents/jquery-ui/jquery-ui.min.js',
 //        'bower_components/bootstrap/dist/js/bootstrap.min.js',

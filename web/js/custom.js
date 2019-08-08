@@ -5,7 +5,7 @@ function re(data) {
 
 $(document).ready(function () {
     $(".relay-control[data-id]").click(function () {
-        var $this = $(this);
+        let $this = $(this);
         $.get("/api/relay?a="+$this.data("id")+"&r="+Number(!$this.hasClass("on")), function (data) {
             $(".relay-status[data-id='"+$this.data("id")+"']").text(re(data));
             if (data == 0) {
@@ -18,79 +18,158 @@ $(document).ready(function () {
 
     });
 
-    /* ChartJS
-    * -------
-    * Here we will create a few charts using ChartJS
-    */
+    $(".emergencyStop[data-id]").click(function () {
+        let action
+        let $this = $(this);
+        action = 'on';
+        if($(".stateEmergencyStop").hasClass("bg-yellow") || $(".stateEmergencyStop").hasClass("bg-green")) {
+            action = 'on';
+        }
+        if($(".stateEmergencyStop").hasClass("bg-red")) {
+            action = 'off';
+        }
+        $.get("/api/emergency-stop?action="+action+"&topic="+$this.data("id"), function (data) {
+            if (data == 0) {
+                $(".stateEmergencyStop").removeClass("bg-yellow").removeClass("bg-red").addClass("bg-green");
+            }
+            if (data == 1) {
+                $(".stateEmergencyStop").removeClass("bg-yellow").removeClass("bg-green").addClass("bg-red");
+            }
+        });
+    });
 
-var areaChartOptions = {
-    //Boolean - If we should show the scale at all
-    showScale: true,
-    //Boolean - Whether grid lines are shown across the chart
-    scaleShowGridLines: false,
-    //String - Colour of the grid lines
-    scaleGridLineColor: "rgba(0,0,0,.05)",
-    //Number - Width of the grid lines
-    scaleGridLineWidth: 1,
-    //Boolean - Whether to show horizontal lines (except X axis)
-    scaleShowHorizontalLines: true,
-    //Boolean - Whether to show vertical lines (except Y axis)
-    scaleShowVerticalLines: true,
-    //Boolean - Whether the line is curved between points
-    bezierCurve: true,
-    //Number - Tension of the bezier curve between points
-    bezierCurveTension: 0.3,
-    //Boolean - Whether to show a dot for each point
-    pointDot: false,
-    //Number - Radius of each point dot in pixels
-    pointDotRadius: 4,
-    //Number - Pixel width of point dot stroke
-    pointDotStrokeWidth: 1,
-    //Number - amount extra to add to the radius to cater for hit detection outside the drawn point
-    pointHitDetectionRadius: 20,
-    //Boolean - Whether to show a stroke for datasets
-    datasetStroke: true,
-    //Number - Pixel width of dataset stroke
-    datasetStrokeWidth: 2,
-    //Boolean - Whether to fill the dataset with a color
-    datasetFill: true,
-    //String - A legend template
-    legendTemplate: "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].lineColor%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>",
-    //Boolean - whether to maintain the starting aspect ratio or not when responsive, if set to false, will take up entire container
-    maintainAspectRatio: false,
-    //Boolean - whether to make the chart responsive to window resizing
-    responsive: true
-};
+    function leakage() {
+        if($("div").is($(".leakage-control[data-id]"))) {
+            let $this = $(".leakage-control[data-id]");
+            $.get("/api/leakage?topic="+$this.data("id"), function (data) {
+                if (data == 0) {
+                    $(".leakage-status[data-id='"+$this.data("id")+"']").text("Норма");
+                    $this.removeClass('bg-yellow').removeClass('bg-red').addClass('bg-green');
+                }
+                if (data == 1) {
+                    $(".leakage-status[data-id='"+$this.data("id")+"']").text("Протечка");
+                    $this.removeClass('bg-yellow').removeClass('bg-green').addClass('bg-red');
+                    console.log("alarma!");
+                    $('#carteSoudCtrl')[0].play();
+                }
+            });
+            setTimeout(leakage, 10000);
+        }
+    }
 
-    //-------------
-    //- LINE CHART -
-    //--------------
-    if (typeof areaChartData1 !== 'undefined') {
-        var lineChartCanvas1 = $("#lineChart1").get(0).getContext("2d");
-        var lineChart1 = new Chart(lineChartCanvas1);
-        var lineChartOptions1 = areaChartOptions;
-        lineChartOptions1.datasetFill = false;
-        lineChart1.Line(areaChartData1, lineChartOptions1);
+    leakage();
+
+    function stateRelays() {
+        $(".relay-control[data-id]").map(function (key, value) {
+            topic = $(value).data("id");
+            $.get("/api/relay-state?topic="+topic, function (data) {
+                if (data == 1) {
+                    $(value).parent().removeClass('bg-yellow').removeClass('bg-red').addClass('bg-green');
+                }
+                if (data == 0) {
+                    console.log();
+                    $(value).parent().removeClass('bg-yellow').removeClass('bg-green').addClass('bg-red');
+                }
+            });
+        });
+        setTimeout(stateRelays, 5000);
     }
-    if (typeof areaChartData2 !== 'undefined') {
-        var lineChartCanvas2 = $("#lineChart2").get(0).getContext("2d");
-        var lineChart2 = new Chart(lineChartCanvas2);
-        var lineChartOptions2 = areaChartOptions;
-        lineChartOptions2.datasetFill = false;
-        lineChart2.Line(areaChartData2, lineChartOptions2);
+
+    stateRelays();
+
+// use chart.js to make cool graphics
+    var charter = $('.sensorchart[data-topic]');
+    var chartTopic = []; // topics array with objects chart.js and lineCharts for chartjs
+    var chartOptions = {
+        legend:false,
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero:false
+                }
+            }],
+            xAxes: [{
+                display: false
+            }]
+        },
+    };
+
+    function renderDate(charter, date, chartTopic){
+        charter.map(function (key, value) {
+            if(!date){
+                date = 'current';
+            }
+
+            var nameTopic = $(value).data('topic');
+            var topic = value['id'];
+            var ctx = document.getElementById(topic);
+
+            if (date === 'current') {
+                $.get('/api/chart', {'date': 'current', 'topic': nameTopic}).done(function (dataChart) {
+                    chartTopic[nameTopic] = new Chart(ctx, {
+                        type: 'line',
+                        data:  dataChart,
+                        options: chartOptions,
+                    });
+                });
+            }
+            else {
+                $.get('/api/chart', {'date': date, 'topic': nameTopic}).done(function (dataChart) {
+                    // addData(chartTopic[nameTopic],dataChart['labels'],dataChart['datasets'])
+                    // chartTopic[nameTopic].clear();
+                    chartTopic[nameTopic].config.data = dataChart;
+                    chartTopic[nameTopic].update();
+                });
+            }
+
+        });
     }
-    if (typeof areaChartData3 !== 'undefined') {
-        var lineChartCanvas3 = $("#lineChart3").get(0).getContext("2d");
-        var lineChart3 = new Chart(lineChartCanvas3);
-        var lineChartOptions3 = areaChartOptions;
-        lineChartOptions3.datasetFill = false;
-        lineChart3.Line(areaChartData3, lineChartOptions3);
+
+    renderDate(charter, 'current', chartTopic);
+
+    function isCurrentDateForm() {
+        if ($('#isDate').val() == 'current') {
+            $('#isDate').val(0);
+        }
     }
-    if (typeof areaChartData4 !== 'undefined') {
-        var lineChartCanvas4 = $("#lineChart4").get(0).getContext("2d");
-        var lineChart4 = new Chart(lineChartCanvas4);
-        var lineChartOptions4 = areaChartOptions;
-        lineChartOptions4.datasetFill = false;
-        lineChart4.Line(areaChartData4, lineChartOptions4);
+
+    function prevDate() {
+        //http://momentjs.com/docs/#/parsing/date/
+        isCurrentDateForm();
+        var date = $('#isDate').val();
+        date--;
+        $('#isDate').val(date);
+        date = date * (-1);
+        date = moment().subtract(date, 'days').format('YYYY-MM-DD');
+        console.log(date);
+        $(".dateIs").html(date);
+        renderDate(charter, date, chartTopic);
     }
+
+    function nextDate() {
+        //http://momentjs.com/docs/#/parsing/date/
+        isCurrentDateForm();
+        var date = $('#isDate').val();
+        date++;
+        $('#isDate').val(date);
+        date = moment().add(date, 'days').format('YYYY-MM-DD');
+        console.log(date);
+        $('.dateIs').html(date);
+        renderDate(charter, date, chartTopic);
+    }
+
+    $('#prev-date').click(function(){ prevDate(); });
+    $('#next-date').click(function(){ nextDate(); });
+
+    function stateSensors() {
+        $(".sensor-state[data-topic]").map(function (key, value) {
+            topic = $(value).data("topic");
+            $.get("/api/sensor-state?topic="+topic, function (data) {
+                $(value).html(data);
+            });
+        });
+        setTimeout(stateSensors, 10000);
+    }
+
+    stateSensors();
 });

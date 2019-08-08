@@ -34,7 +34,7 @@ class SiteController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::class,
-//                'only' => ['logout'],
+                'only' => ['logout','arduino','chart'],
                 'rules' => [
                     [
                         'actions' => ['logout'],
@@ -42,19 +42,19 @@ class SiteController extends Controller
                         'roles' => ['?'],
                     ],
                     [
-                        'actions' => ['arduino'],
+                        'actions' => ['arduino','chart'],
                         'roles' => ['@'],
                         'allow' => true,
                     ],
-//                    [
-//                        'actions' => ['news'],
-//                        'roles' => ['guest'],
-//                        'allow' => false,
-//                    ],
                     [
-//                        'actions' => ['logout'],
+                        'actions' => ['arduino','chart'],
+                        'roles' => ['?'],
+                        'allow' => false,
+                    ],
+                    [
+                        'actions' => ['login'],
                         'allow' => true,
-//                        'roles' => ['?'],
+                        'roles' => ['?'],
                     ],
                 ],
             ],
@@ -117,18 +117,8 @@ class SiteController extends Controller
                         ];
                         $driving = [
                             'top' => 'на главную',
-//                            'stop-all' => 'выключить все реле!',
                         ];
                         break;
-//                    case 'stop-all':
-//                        $speech  = [
-//                            'Передана команда всем реде',
-//                            'Ждите идет операция!',
-//                        ];
-//                        $driving = [
-//                            'top' => 'на главную',
-//                        ];
-//                        break;
                     case 'telebot':
                         $speech  = [
                             'Да, есть сторонняя реализация, переделан на более новый движок бота.',
@@ -235,41 +225,30 @@ class SiteController extends Controller
             return $this->refresh();
         }
 
-        //$db_update = 'none';
-
         return $this->render('form', [
             'model' => $model,
-            //'sqlo'  => $db_update,
         ]);
     }
+
+    /**
+     * Page from chart show
+     * @return string
+     */
     public function actionChart()
     {
-        $charts = [
-          0 => [
-              'nameObject' => 'холодная прихожка',
-              'nameCart' => '',
-              'chart' => [0,1,2,3,4,5,6,7,8,9],
-          ],
-          1 => [
-              'nameObject' => 'пристройка',
-              'nameCart' => '',
-              'chart' => [0,1,2,3,4,5,6,7,8,9],
-          ],
-          2 => [
-              'nameObject' => 'низа',
-              'nameCart' => '',
-              'chart' => [0,1,2,3,4,5,6,7,8,9],
-          ],
-          3 => [
-              ''
-          ]
-        ];
-        $labels = ['\'10:00\'', '\'10:30\'', '\'11:00\'', '\'11:30\'', '\'12:00\'', '\'12:30\'', '\'13:00\''];
-        return $this->render('charts', [
-            'charts'=> $charts,
-            'labels' => $labels,
-        ]);
+        return $this->render('charts');
     }
+
+    /**
+     * Page from alarm signals and notifications
+     * @return string
+     */
+    public function actionAlarm()
+    {
+        // @Todo сделать нотификацию через JS - детекция аварийных сообщений и вывод их в чат окно
+        return $this->render('alarm');
+    }
+
     /**
      * penetrate polimorfizm
      */
@@ -282,10 +261,36 @@ class SiteController extends Controller
             $obj = new \app\helpers\weather\TwoHelper();
         } else {
             throw new InvalidArgumentException;
-        };
+        }
 
         return $this->render('condrad', ['obj' => $obj]);
 
+    }
+
+    /**
+     * @return string
+     */
+    public function actionWatering()
+    {
+        // изменить 0 или 1 на 'on' или 'off' в сенсоре c id в ячейке 'relay1', есть еще ячейка 'relay2'
+        $relays = Arduinoiot::find()->all();
+        // convert data fron view arduino.php
+        $ArrayRalays = ArrayHelper::toArray($relays, [
+            'app\models\Post' => [
+                'id',
+                'name',
+                'ralay1'
+            ],
+        ]);
+
+        foreach ($ArrayRalays as $value){
+            $massive_ralays["$value[id]"]['relay1'] = ApiController::status($value['relay1']);
+            $massive_ralays["$value[id]"]['name'] = $value['name'];
+        }
+
+        return $this->render('watering', [
+            'ralays' => $massive_ralays,
+        ]);
     }
 
     /**
@@ -306,21 +311,6 @@ class SiteController extends Controller
 
         $timeLineW   = Weather::find()->max('date');
         $acuweather = Weather::find()->where(['date' => "$timeLineW"])->one();
-        // изменить 0 или 1 на 'on' или 'off' в сенсоре c id в ячейке 'relay1', есть еще ячейка 'relay2'
-        $relays = Arduinoiot::find()->all();
-        // convert data fron view arduino.php
-        $ArrayRalays = ArrayHelper::toArray($relays, [
-            'app\models\Post' => [
-                'id',
-                'name',
-                'ralay1'
-            ],
-        ]);
-
-        foreach ($ArrayRalays as $value){
-            $massive_ralays["$value[id]"]['relay1'] = ApiController::status($value['relay1']);
-            $massive_ralays["$value[id]"]['name'] = $value['name'];
-        }
 
         return $this->render('arduino', [
             'acuweather'=> $acuweather,
@@ -332,7 +322,6 @@ class SiteController extends Controller
             'holl_humidity'           => $mqtt_holl_humidity,
             'margulis_temperature'    => $mqtt_margulis_temperature,
             'margulis_humidity'       => $mqtt_margulis_humidity,
-            'ralays' => $massive_ralays,
         ]);
     }
 
@@ -348,7 +337,8 @@ class SiteController extends Controller
     protected function verifiMqttData($topic)
     {
         $cache = new MqttLogic();
-        return $cache->getCacheMqtt($topic) ?? Mqtt::find()->where(['topic' => $topic])->orderBy('datetime DESC')->limit(1)->select('payload')->scalar();
+        return $cache->getCacheMqtt($topic) ?? Mqtt::find()->where(['topic' => $topic])
+                ->orderBy('datetime DESC')->limit(1)->select('payload')->scalar(). ' - no cache';
     }
 
     public function pressureToMmRt($pressure)

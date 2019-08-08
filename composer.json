@@ -31,7 +31,9 @@
         "yiisoft/yii2-swiftmailer": "~2.0.0",
         "botstan/api": "dev-master",
         "bluerhinos/phpmqtt": "dev-master",        
-        "almasaeed2010/adminlte": "~2.4"
+        "almasaeed2010/adminlte": "~2.4",
+      "ext-calendar": "*",
+      "ext-json": "*"
     },
     "require-dev": {
         "yiisoft/yii2-debug": "~2.0.0",

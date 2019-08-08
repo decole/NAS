@@ -33,6 +33,10 @@ a.small-box-footer.off.relay-control, a.small-box-footer.on.relay-control {
 .small-box h3 {
     font-size: 34px;
 }
+.small-box>.small-box-footer.off {
+    cursor: pointer;
+}
+
 @media (max-width: 425px) {
     .small-box h3{
         font-size: 20px;

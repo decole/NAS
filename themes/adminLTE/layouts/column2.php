@@ -43,9 +43,10 @@ use app\themes\adminLTE\components\ThemeNav;
                       ['label'=>Yii::t('app','Основное'), 'options'=>['class'=>'header']],
                       ['label' => ThemeNav::link('Main', 'fa fa-shirtsinbulk'), 'url' => '/'],
                       ['label' => ThemeNav::link('Sensors', 'fa fa-dashboard'), 'url' => ['/site/arduino'], 'visible'=>!Yii::$app->user->isGuest],
+                      ['label' => ThemeNav::link('Watering', 'fa fa-dashboard'), 'url' => ['/site/watering'], 'visible'=>!Yii::$app->user->isGuest],
                       ['label' => ThemeNav::link('Charts', 'fa fa-bar-chart'), 'url' => ['/site/chart'], 'visible'=>!Yii::$app->user->isGuest],
+                      ['label' => ThemeNav::link('Alarm', 'fa fa-warning'), 'url' => ['/site/alarm'], 'visible'=>!Yii::$app->user->isGuest],
                       ['label' => ThemeNav::link('Blog', 'fa fa-shirtsinbulk'), 'url' => 'http://blog.uberserver.ru'],
-//                      ['label' => ThemeNav::link('Сенсоры', 'fa fa-server'), 'url' => ['/site/arduino'], 'visible'=>!Yii::$app->user->isGuest],
                   ],
                 ]);
             ?>

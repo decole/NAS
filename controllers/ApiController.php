@@ -6,26 +6,24 @@ use app\helpers\mqtt\MqttLogic;
 use app\models\Arduino;
 use app\models\Arduinoiot;
 use app\models\Mqtt;
+use app\models\Weather;
 use Yii;
 use yii\filters\auth\CompositeAuth;
 use yii\filters\ContentNegotiator;
 use yii\filters\RateLimiter;
 use yii\filters\VerbFilter;
+use yii\helpers\ArrayHelper;
 use yii\web\Controller;
 use yii\web\Response;
 
 /**
- * Class ApiController for usign all WEB API actions
+ * Class ApiController for using all WEB API actions
  * for Arduino iot devices at home
  * for GUI www.uberserver.ru
- * for Alisa voice
  * @package app\controllers
  */
 class ApiController extends Controller
 {
-    /**
-     * @inheritdoc
-     */
     /**
      * @inheritdoc
      */
@@ -85,46 +83,17 @@ class ApiController extends Controller
      */
     public function actionIndex()
     {
-//        Yii::$app->response->format = Response::FORMAT_HTML;
-//        if (Yii::$app->request->isGet) {
-//            $param = Yii::$app->request->get();
-//            // http://192.168.1.5/api/index?token=EB6DD&t=23&h=35&p=
-//            // Array ( [token] => EB6DD [t] => 23 [h] => 35 [p] =>  )
-//            $param['token'] = $param['token'] ?? 0;
-//            $param['t'] = $param['t'] ?? 99;
-//            $param['h'] = $param['h'] ?? 0;
-//            $param['p'] = $param['p'] ?? '';
-//            /** @var integer $nameArduino */
-//
-//            if( $param['t'] == 99 ) return null;
-//            $nameArduino = $this->nameArduino($param['token']);
-//
-//            $model = new Arduino();
-//            $model->load(Yii::$app->request->get());
-//            $model->arduino = $nameArduino;
-//            $model->temperaturу = intval($param['t']);
-//            $model->humidity = intval($param['h']);
-//            $model->pressure = intval($param['p']);
-////            $model->date = Yii::$app->formatter->asDate(date("Y-m-d H:i:s"), 'yyyy-MM-dd HH:mm:ss');
-//            $model->date = date("Y-m-d H:i:s");
-//            //->modify('+3 hour')
-//            $model->save();
-//
-//            $file = "logGetParams.txt";
-//            $getParam = var_export($_REQUEST, true).PHP_EOL;
-//            file_put_contents($file, $getParam, FILE_APPEND | LOCK_EX);
-//        }
         return null;
     }
 
     /**
      * uberserver.ru/relay 'GET' query  for update status relays.
      *
-     * @return int|null|string|void
+     * @return int|null|string|bool
      * @throws \yii\base\InvalidRouteException
      * @throws \yii\console\Exception
      */
-    public function actionRelay()
+    public function actionRelay(): bool
     {
         Yii::$app->response->format = Response::FORMAT_RAW;
         // http://uberserver.ru/api/relay?a=1&r=0
@@ -155,19 +124,164 @@ class ApiController extends Controller
     }
 
     /**
+     * generate charts
+     * may in /site/chart
+     * @param $date
+     * @param $topic
+     * @return array
+     */
+    public function actionChart($date, $topic): array
+    {
+        if($date == 'current') {
+            $date = date('Y-m-d');
+        }
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $mqttData = Mqtt::find()->where(['DATE(`datetime`)' => $date, 'topic' => $topic])->all();
+        $weatherData = Weather::find()->where(['DATE(`date`)' => $date])->all();
+        $mqttData = ArrayHelper::toArray($mqttData);
+        $weatherData = ArrayHelper::toArray($weatherData);
+
+        $chart = [];
+        $min = '';
+        foreach ($mqttData as $mqtt) {
+            $timeMqtt = date_timestamp_get(date_create($mqtt['datetime']));
+            foreach ($weatherData as $key => $acuweather) {
+                $timeAcuweather = date_timestamp_get(date_create($acuweather['date']));
+                if($timeMqtt > $timeAcuweather ) {
+                    $min = $acuweather['temperature'];
+                }
+                if($timeMqtt < $timeAcuweather) {
+                    if(empty($min)) {
+                        $min =  $acuweather['temperature'];
+                    }
+                    $chart[$mqtt['datetime']] = [
+                        'mqtt' => $mqtt['payload'],
+                        'acuweather' => $acuweather['temperature'],
+                    ];
+                    break;
+                }
+            }
+        }
+        $template = [];
+
+        $mqttValues = [];
+        $weatherValues = [];
+        foreach ($chart as $valueChart) {
+            $mqttValues[] = $valueChart['mqtt'];
+            $weatherValues[] = $valueChart['acuweather'];
+        }
+
+        $template['labels'] = array_keys($chart); // ["$topic"]
+        $template['datasets'] = [
+            [
+                'data' => array_values($mqttValues),
+                'label' => 'Mqtt sensor',
+                'fill'=>false,
+                'borderColor'=>'rgb(75, 192, 192)',
+                'lineTension'=>0.1,
+            ],
+            [
+                'data' => array_values($weatherValues),
+                'label' => 'AcuWeather',
+                'fill'=>false,
+                'borderColor'=>'rgb(114, 151, 151)',
+                'lineTension'=>0.1,
+            ],
+        ];
+
+        return $template;
+    }
+
+    /**
+     * Validate leakage state in smart watering
+     * @param $topic
+     * @return void
+     */
+    public function actionLeakage($topic): void
+    {
+        Yii::$app->response->format = Response::FORMAT_RAW;
+        $mqtt = new MqttLogic();
+        $options = $mqtt::listTopics();
+        $stateLeakage = $mqtt->getCacheMqtt($topic);
+        if($options[$topic]['condition']['normal'] == $stateLeakage)
+        {
+            echo 0;
+        }
+        else {
+            echo 1;
+        }
+
+    }
+
+    /**
+     * Show state Emergency Stop topic - water/alarm and manipulate from here
+     * @param $action
+     * @param $topic
+     * @return void
+     */
+    public function actionEmergencyStop($action, $topic): void
+    {
+        Yii::$app->response->format = Response::FORMAT_RAW;
+        if($action !== null && $topic !== null) {
+            $mqtt = new MqttLogic();
+            if($action === 'on') {
+                $mqtt->post($topic, 1);
+                echo 1;
+            }
+            if($action === 'off') {
+                $mqtt->post($topic, 0);
+                echo 0;
+            }
+            if($action === 'state') {
+                echo $mqtt->getCacheMqtt($topic);
+            }
+        }
+        else {
+            echo 0;
+        }
+
+    }
+
+    public function actionRelayState($topic): void
+    {
+        Yii::$app->response->format = Response::FORMAT_RAW;
+        if( $topic !== null) {
+            $mqtt = new MqttLogic();
+            $options = $mqtt::listTopics();
+            foreach ($options as $swift=>$option) {
+                if($option['type'] === 'swift' && $option['arduionIotId'] == $topic) {
+                    echo $mqtt->getCacheMqtt($swift);
+                }
+            }
+        }
+    }
+
+    public function actionSensorState($topic): void
+    {
+        Yii::$app->response->format = Response::FORMAT_RAW;
+        if( $topic !== null) {
+            $mqtt = new MqttLogic();
+            $options = $mqtt::listTopics();
+            foreach ($options as $sensor=>$option) {
+                if($option['type'] === 'sensor' && $sensor == $topic) {
+                    echo $mqtt->getCacheMqtt($sensor);
+                }
+            }
+        }
+    }
+
+    /**
      * verify name of relay to Arduino sensor
      *
      * @param $topic
      * @param $data
      * @return int|mixed|\yii\console\Response
-     * @throws \yii\base\InvalidRouteException
-     * @throws \yii\console\Exception
      */
     private function changeRelay($topic, $data): void
     {
         if($this->nameRelay($topic)){
             $topic = $this->nameRelay($topic);
-            $data = $this->status($data);
+            //$data = $this->status($data); // 0 change to off, 1 change to on
             $mqtt = new MqttLogic;
             $mqtt->post($topic, $data);
             $mqtt->disconnect();
@@ -178,9 +292,9 @@ class ApiController extends Controller
     /**
      * put name for real topics posting in mqtt protocol
      * @param $name
-     * @return string
+     * @return string|bool
      */
-    private function nameRelay($name)
+    private function nameRelay($name):string
     {
         $topics = Mqtt::getSwiftNames();
         $finalArray = [];
@@ -205,7 +319,7 @@ class ApiController extends Controller
      * @param $token
      * @return int
      */
-    public function status($token)
+    public static function status($token)
     {
         $status = 'off';
         switch ($token) {
@@ -218,5 +332,7 @@ class ApiController extends Controller
         }
 
         return $status;
+
     }
+
 }

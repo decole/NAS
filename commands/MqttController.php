@@ -17,12 +17,7 @@ use yii\db\Expression;
 
 
 /**
- * This command echoes the first argument that you have entered.
- *
- * This command is provided as an example for you to learn how to create console commands.
- *
- * @author Qiang Xue <qiang.xue@gmail.com>
- * @since 2.0
+ * Commands for MQTT sensors and posting to MQTT protocol
  */
 ini_set('output_buffering','on');
 
@@ -79,11 +74,33 @@ class MqttController extends Controller {
     /**
      * Sending data to topic on mqtt protocol
      * @param $topic $data
+     * @return string
      */
     public function actionPost($topic, $data)
     {
         $mqtt = new MqttLogic;
         return $mqtt->post($topic, $data);
+    }
+
+    /**
+     * Checking offline sensors and sending in Telegram
+     */
+    public function actionCheckOnline()
+    {
+        $mqtt = new MqttLogic();
+        $check = $mqtt->checkOnline();
+        $options = $mqtt::listTopics();
+        $message = null;
+
+        foreach($check as $topic=>$value) {
+            if($value === 'offline') { // offline
+                $message .= $topic.' - is offline'.PHP_EOL;
+            }
+        }
+        if($message !== null){
+            $mqtt->mailing($message, $options);
+        }
+
     }
 
     /**
@@ -99,7 +116,7 @@ class MqttController extends Controller {
         Mqtt::deleteAll(['AND', ['>=', 'datetime', $start], ['<', 'datetime', $end]]);
         */
         /*
-         * - удалить весь месяц(с первого по последнее число), за третий месяц назад от текущего.
+         * - удалить весь месяц (с первого по последнее число), за третий месяц назад от текущего.
          * например сегодня 20 ноября, удаляются данные 1-31 августа
         */
         // $datas = Mqtt::find()->where(['topic' => $topic, 'DATE(`datetime`)' => $date])->all();
@@ -109,12 +126,12 @@ class MqttController extends Controller {
         Mqtt::deleteAll(['AND',
             ['<', 'datetime', date('Y-'.$afterSecondMonth.'-01 00:00:00')],
             ['>=', 'datetime', date('Y-'.$afterTherdMonth.'-01 00:00:00')]
+//            ['>=', 'datetime', date('2018-'.$afterTherdMonth.'-01 00:00:00')]
         ]);
+
 
         return true;
     }
-
-
 
     /**
      * @param $month

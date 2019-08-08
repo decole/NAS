@@ -22,6 +22,7 @@ class Mqtt extends \yii\db\ActiveRecord
     const SENSOR_UNDERGROUND_HUMIDITY    = 'underground/humidity';
     const SENSOR_MARGULIS_TEMPERATURE    = 'margulis/temperature';
     const SENSOR_MARGULIS_HUMIDITY       = 'margulis/humidity';
+    const SENSOR_WATER_LEAKAGE           = 'water/leakage';
 
     const SWIFT_WATER_MAJOR              = 'water/major';
     const SWIFT_WATER_1                  = 'water/1';
@@ -29,6 +30,8 @@ class Mqtt extends \yii\db\ActiveRecord
     const SWIFT_WATER_3                  = 'water/3';
     const SWIFT_DEFAULT                  = 'noname';
 
+    const MARGULIS                       = 'MARGULIS';
+    const WATERING                       = 'WATERING';
 
     /**
      * {@inheritdoc}
@@ -36,9 +39,15 @@ class Mqtt extends \yii\db\ActiveRecord
     public static function tableName()
     {
         return 'mqtt';
+
     }
 
-    public static function getSensorNames()
+    /**
+     * Registered sensor topics
+     *
+     * @return array
+     */
+    public static function getSensorNames(): array
     {
         return [
             static::SENSOR_HOLL_TEMPERATURE        => 'температура в холодной прихожке',
@@ -49,10 +58,17 @@ class Mqtt extends \yii\db\ActiveRecord
             static::SENSOR_UNDERGROUND_HUMIDITY    => 'влажность под низами',
             static::SENSOR_MARGULIS_TEMPERATURE    => 'температура в пристройке',
             static::SENSOR_MARGULIS_HUMIDITY       => 'влажность в пристройке',
+            static::SENSOR_WATER_LEAKAGE           => 'умный полив-датчик протечки воды',
         ];
+
     }
 
-    public static function getSwiftNames()
+    /**
+     * Registered swift topics
+     *
+     * @return array
+     */
+    public static function getSwiftNames(): array
     {
         return [
             static::SWIFT_WATER_MAJOR => 'главный клапан полива',
@@ -61,7 +77,23 @@ class Mqtt extends \yii\db\ActiveRecord
             static::SWIFT_WATER_3     => 'клапан 3 полива',
             static::SWIFT_DEFAULT     => 'не идентифицированное устройство',
         ];
+
     }
+
+    /**
+     * List topics from check module is online
+     *
+     * @return array
+     */
+    public static function getModuleNames(): array
+    {
+        return [
+            static::MARGULIS => ['name' => 'модуль пристройка-прихожка-низа', 'check_topic' => 'margulis/temperature'],
+            static::WATERING => ['name' => 'автополив', 'check_topic' => 'water/check/major'],
+        ];
+
+    }
+
 
     /**
      * {@inheritdoc}
@@ -75,6 +107,7 @@ class Mqtt extends \yii\db\ActiveRecord
             [['payload'], 'string', 'max' => 10],
             [['topic'], 'in', 'range' => array_keys(static::getSensorNames())],
         ];
+
     }
 
     /**
@@ -88,5 +121,6 @@ class Mqtt extends \yii\db\ActiveRecord
             'payload' => 'Payload',
             'datetime' => 'Datetime',
         ];
+
     }
 }

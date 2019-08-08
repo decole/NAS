@@ -6,6 +6,7 @@ use api\base\API;
 use api\response\Message;
 use api\response\Update;
 use app\helpers\mqtt\MqttLogic;
+use app\helpers\watering\WateringLogic;
 use app\models\Mqtt;
 use app\models\SimpleData;
 use app\models\Weather;
@@ -68,25 +69,22 @@ class TeleBotController extends Controller
 
         switch ($text) {
             case '/start':
-            case '/start@ArduinBot':
             case '/help':
-            case '/help@ArduinBot':
                 $this->startCommand($message);
                 break;
 
+            case 'hi':
             case 'Hi':
+            case 'hello':
             case 'Hello':
                 $this->helloCommand($message);
                 break;
 
             case '/sensors':
-            case '/sensors@ArduinBot':
                 $this->sensorsCommand($message);
                 break;
 
             case '/weather':
-                // not break
-            case '/weather@ArduinBot':
                 $this->weatherCommand($message);
                 break;
 
@@ -95,10 +93,47 @@ class TeleBotController extends Controller
             case '/bash poweroff':
                 $this->fuckCommand($message);
                 break;
-            case '/swifts':
+
             case '/relays':
                 $this->relaysCommand($message);
                 break;
+
+            case '/watering':
+                $this->wateringCommand($message);
+                break;
+
+            case '/majorOn':
+                $this->majorOnCommand($message);
+                break;
+            
+            case '/majorOff':
+                $this->majorOffCommand($message);
+                break;
+
+            case '/oneOn':
+                $this->oneOnCommand($message);
+                break;
+
+            case '/oneOff':
+                $this->oneOffCommand($message);
+                break;
+
+            case '/twooOn':
+                $this->twooOnCommand($message);
+                break;
+
+            case '/twooOff':
+                $this->twooOffCommand($message);
+                break;
+
+            case '/threeOn':
+                $this->threeOnCommand($message);
+                break;
+
+            case '/threeOff':
+                $this->threeOffCommand($message);
+                break;
+
             default:
                 $this->unknownCommand($message);
                 break;
@@ -115,9 +150,9 @@ class TeleBotController extends Controller
 
         $text = '/sensors ' . PHP_EOL;
         $text .= '/weather ' . PHP_EOL;
-        $text .= '/relays ' . PHP_EOL;
+        $text .= '/watering ' . PHP_EOL;
 
-        $res = $this->api->send($chat_id, $text, $message_id);
+        $res = $this->api->send($text, $chat_id, $message_id);
 
         if ($res instanceof Error) {
             print_r($res);
@@ -131,7 +166,8 @@ class TeleBotController extends Controller
     private function helloCommand(Message $message)
     {
         $chat_id = $message->chat->id;
-        $this->api->send($chat_id, 'Nice to meet you');
+        $message_id = $message->message_id;
+        $this->api->send('Nice to meet you', $chat_id, $message_id);
 
     }
 
@@ -144,13 +180,7 @@ class TeleBotController extends Controller
         $chat_id = $message->chat->id;
         $message_id = $message->message_id;
 
-        if ($message->hasText()) {
-            $this->api->send($chat_id, 'Cool', $message_id);
-        }
-        else
-        {
-            $this->api->send($chat_id, 'I understand only text messages', $message_id);
-        }
+        $this->api->send('Непонял тебя.', $chat_id, $message_id);
 
     }
 
@@ -178,20 +208,8 @@ class TeleBotController extends Controller
     {
         $chatId = $message->chat->id;
         $messageId = $message->message_id;
-        $string = 'Данные по сенсорам:'.PHP_EOL;
-        $topics = MqttLogic::listTopics();
-        $nameOfTopics = Mqtt::getSensorNames();
-        $cache = new MqttLogic;
-        foreach ($topics as $topic => $options) {
-            if($options['type'] == 'sensor') {
-                $payload = $cache->getCacheMqtt($topic);
-                if($payload === null){
-                    $payload = 'memcache no data';
-                }
-                $string .= $nameOfTopics[$topic] . ' - ' . $payload . $topics[$topic]['format'] . PHP_EOL;
-            }
-        }
-
+        $mqtt = new MqttLogic();
+        $string = $mqtt->sensorStatus('telegram');
         $this->api->send($string, $chatId, $messageId);
 
     }
@@ -232,6 +250,129 @@ xxx: Нет, не сработала. Пришлось за пропуском �
         $text = 'Данные по реле:' . PHP_EOL . 'в разработке.' . PHP_EOL;
 
         $this->api->send($text, $chatId);
+    }
+
+    /**
+     * Smart Watering
+     * @param Message $message
+     * @var array $options
+     */
+    private function wateringCommand(Message $message)
+    {
+        $chatId = $message->chat->id;
+        $messageId = $message->message_id;
+        $string = 'Умный полив:'.PHP_EOL.PHP_EOL
+                .'/majorOn'.PHP_EOL.PHP_EOL
+                .'/majorOff'.PHP_EOL.PHP_EOL
+                .'/oneOn'.PHP_EOL.PHP_EOL
+                .'/oneOff'.PHP_EOL.PHP_EOL
+                .'/twooOn'.PHP_EOL.PHP_EOL
+                .'/twooOff'.PHP_EOL.PHP_EOL
+                .'/twooOff'.PHP_EOL.PHP_EOL
+                .'/threeOn'.PHP_EOL.PHP_EOL
+                .'/threeOff'.PHP_EOL.PHP_EOL;
+        $this->api->send($string, $chatId, $messageId);
+
+    }
+
+    /**
+     * Включение главного клапана
+     * @param Message $message
+     * @var array $options
+     */
+    private function majorOnCommand(Message $message)
+    {
+        $chatId = $message->chat->id;
+        $messageId = $message->message_id;
+        $mqtt = new WateringLogic();
+        $string = $mqtt->MajorOn();
+        $string = 'главный клапан - включить'.PHP_EOL;
+        $this->api->send($string, $chatId, $messageId);
+
+    }
+
+    /**
+     * Выключение главного клапана
+     * @param Message $message
+     * @var array $options
+     */
+    private function majorOffCommand(Message $message)
+    {
+        $mqtt = new WateringLogic();
+        $mqtt->MajorOff();
+
+    }
+
+    /**
+     * Включение клапана 1
+     * @param Message $message
+     * @var array $options
+     */
+    private function oneOnCommand(Message $message)
+    {
+        $mqtt = new WateringLogic();
+        $mqtt->OneOn();
+
+    }
+
+    /**
+     * Выключение клапана 1
+     * @param Message $message
+     * @var array $options
+     */
+    private function oneOffCommand(Message $message)
+    {
+        $mqtt = new WateringLogic();
+        $mqtt->OneOff();
+
+    }
+
+    /**
+     * Включение клапана 2
+     * @param Message $message
+     * @var array $options
+     */
+    private function twooOnCommand(Message $message)
+    {
+        $mqtt = new WateringLogic();
+        $mqtt->TwoOn();
+
+    }
+
+    /**
+     * Выключение клапана 2
+     * @param Message $message
+     * @var array $options
+     */
+    private function twooOffCommand(Message $message)
+    {
+        $mqtt = new WateringLogic();
+        $mqtt->TwoOff();
+
+    }
+
+    /**
+     * Включение клапана 3
+     * @param Message $message
+     * @var array $options
+     */
+    private function threeOnCommand(Message $message)
+    {
+        $mqtt = new WateringLogic();
+        $mqtt->ThreeOn();
+
+    }
+
+    /**
+     * Выключение клапана 3
+     * @param Message $message
+     * @var array $options
+     */
+    private function threeOffCommand(Message $message)
+    {
+        $mqtt = new WateringLogic();
+        $mqtt->ThreeOff();
+
     }
 
 }

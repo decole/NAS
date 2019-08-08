@@ -26,7 +26,7 @@ class TelegramLogic extends BaseObject
     public  $api;
     public $users = [
         'decole' => '245579764',
-        'panterka' => ''
+        'panterka' => '' // 448242751
     ];
 
     public function __construct(array $config = [])

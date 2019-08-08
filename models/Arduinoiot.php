@@ -8,9 +8,9 @@ use Yii;
  * This is the model class for table "arduinoiot".
  *
  * @property integer $id
- * @property integer $relay1
- * @property integer $relay2
  * @property string $name
+ * @property string $topic
+ * @property integer $relay1
  */
 class Arduinoiot extends \yii\db\ActiveRecord
 {
@@ -29,8 +29,8 @@ class Arduinoiot extends \yii\db\ActiveRecord
     {
         return [
             [['id'], 'required'],
-            [['id', 'relay1', 'relay2'], 'integer'],
-            [['name'], 'string', 'max' => 250],
+            [['id', 'relay1'], 'integer'],
+            [['name', 'topic'], 'string', 'max' => 250],
             [['id'], 'unique'],
         ];
     }
@@ -43,8 +43,8 @@ class Arduinoiot extends \yii\db\ActiveRecord
         return [
             'id' => Yii::t('app', 'ID'),
             'relay1' => Yii::t('app', 'Relay1'),
-            'relay2' => Yii::t('app', 'Relay2'),
             'name' => Yii::t('app', 'Name'),
+            'topic' => Yii::t('app', 'Topic'),
         ];
     }
 

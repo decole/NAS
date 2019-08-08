@@ -19,5 +19,11 @@ $this->params['breadcrumbs'][] = $this->title;
 </div>
 
 <div class="inner">
-
+    <?php
+    if (!extension_loaded('mosquitto')) {
+        echo "Mosquitto not loaded";
+    } else {
+        echo "Mosquitto loaded";
+    }
+    ?>
 </div>
